@@ -1,4 +1,5 @@
 #%%
+#Packages
 import collections
 import math
 from PIL import Image, ImageDraw, ImageFont
@@ -119,6 +120,7 @@ def plot_hex_grid_text(h,draw):   #writes the q,r coordinates in the middle of e
 
 def plot_hex_dots(h,dot_size,color,draw):
     corners=to_tuple(polygon_corners(layout,h))
+    corners.append(hex_to_pixel(layout,h))
     for p in corners:
         p1=(p[0]-dot_size,p[1]-dot_size)
         p2=(p[0]+dot_size,p[1]+dot_size)
@@ -130,23 +132,23 @@ def plot_hex_dots(h,dot_size,color,draw):
 #%%
 #Drawing Hexogonal grid
 image_size=(4096,4096)
-im=Image.new('RGB',image_size,color='black')
+im=Image.new('RGB',image_size,color=(202,163,24))
 d=ImageDraw.Draw(im)
 #origin=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
 origin=Point(0,0) #Top left corner
 size=Point(900,900)
-dot_size=0.4*size[0]
+dot_size=0.45*size[0]
 line_width=math.floor(.3*size[0])
-structure_color=(202,163,24)
+structure_color="black"
 layout= Layout(layout_flat,size,origin)
-map=rect_map(3,3)
+map=rect_map(4,4)
 
 for h in map:
     #plot_hex_dots(h,dot_size,d)
     plot_hex_dots(h,dot_size,structure_color,d)
     
-#im.show()
-im.save("hex_dots_smalln.png")
+im.show()
+im.save("hex_dots_withcenterdot.png")
 
 
 
