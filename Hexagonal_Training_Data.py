@@ -93,12 +93,12 @@ def to_tuple(corners): #
 
 
 
-# Creates rectangular map of hexagons, origin is in top left
+# Creates rectangular map of hexagons for flat top, origin is in top left
 def rect_map(map_height,map_width):
     map=[]
-    for r in range(map_height):
-        r_offset=math.floor(r/2)
-        for q in range(-r_offset,map_width-r_offset):
+    for q in range(map_height):
+        q_offset=math.floor(q/2)
+        for r in range(-q_offset,map_width-q_offset):
             #map.append(Hex(q,r-map_height//2,-(q)-(r-map_height//2)))
             map.append(Hex(q,r,-q-r))
     return map
@@ -106,9 +106,10 @@ def rect_map(map_height,map_width):
 
 #%%
 #Functions for drawing hexagons
-def plot_hex_grid(h,draw):
+def plot_hex_grid(h,line_width,color,draw):
     corners=to_tuple(polygon_corners(layout,h))
-    draw.polygon(corners,outline='white')
+    #corners.append[corners[0]]
+    draw.line(corners[:4],fill=color,width=line_width,joint='curve') #only draws half of each hexagon
 
 def plot_hex_grid_text(h,draw):   #writes the q,r coordinates in the middle of each hexagon
     corners=to_tuple(polygon_corners(layout,h))
@@ -116,33 +117,36 @@ def plot_hex_grid_text(h,draw):   #writes the q,r coordinates in the middle of e
     shift=d.textsize(f"({h.q},{h.r})")
     draw.text((hex_to_pixel(layout,h).x-shift[0]//2,hex_to_pixel(layout,h).y-shift[1]//2),f"({h.q},{h.r})",fill='white')
 
-def plot_hex_dots(h,draw):
+def plot_hex_dots(h,dot_size,color,draw):
     corners=to_tuple(polygon_corners(layout,h))
-    dot_size=70
     for p in corners:
         p1=(p[0]-dot_size,p[1]-dot_size)
         p2=(p[0]+dot_size,p[1]+dot_size)
-        draw.ellipse([p1,p2],fill='white')
+        draw.ellipse([p1,p2],fill=color)
 
 
 
 
 #%%
 #Drawing Hexogonal grid
-image_size=(10240,10240)
-im=Image.new('1',image_size,color=0)
+image_size=(4096,4096)
+im=Image.new('RGB',image_size,color='black')
 d=ImageDraw.Draw(im)
 #origin=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
 origin=Point(0,0) #Top left corner
-size=Point(1500,1500)
-layout= Layout(layout_pointy,size,origin)
-map=rect_map(6,6)
+size=Point(900,900)
+dot_size=0.4*size[0]
+line_width=math.floor(.3*size[0])
+structure_color=(202,163,24)
+layout= Layout(layout_flat,size,origin)
+map=rect_map(3,3)
 
 for h in map:
-    plot_hex_dots(h,d)
+    #plot_hex_dots(h,dot_size,d)
+    plot_hex_dots(h,dot_size,structure_color,d)
     
-im.show()
-im.save("hex_lat_dots.png")
+#im.show()
+im.save("hex_dots_smalln.png")
 
 
 
@@ -176,3 +180,6 @@ def test_all():
     test_hex_distance()
 test_all()
 
+
+
+#%%
