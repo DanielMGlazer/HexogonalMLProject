@@ -2,7 +2,10 @@
 #Packages
 import collections
 import math
+import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont
+import numpy as np 
+from scipy.stats import norm
 
 #%%
 #Defining functions of hexogonal grid
@@ -118,37 +121,62 @@ def plot_hex_grid_text(h,draw):   #writes the q,r coordinates in the middle of e
     shift=d.textsize(f"({h.q},{h.r})")
     draw.text((hex_to_pixel(layout,h).x-shift[0]//2,hex_to_pixel(layout,h).y-shift[1]//2),f"({h.q},{h.r})",fill='white')
 
-def plot_hex_dots(h,dot_size,color,draw):
-    corners=to_tuple(polygon_corners(layout,h))
-    corners.append(hex_to_pixel(layout,h))
-    for p in corners:
-        p1=(p[0]-dot_size,p[1]-dot_size)
-        p2=(p[0]+dot_size,p[1]+dot_size)
-        draw.ellipse([p1,p2],fill=color)
+def solid_circ(p,radius,color,draw):
+    p1=(p[0]-radius,p[1]-radius)
+    p2=(p[0]+radius,p[1]+radius)
+    draw.ellipse([p1,p2],fill=color)
 
+def draw_circ(p,radius,color,draw):
+    p1=(p[0]-radius,p[1]-radius)
+    p2=(p[0]+radius,p[1]+radius)
+    draw.ellipse([p1,p2],outline=color)
+
+
+def Gauss_circ(p,radius,color,draw):
+    _scale=.05*radius
+    for i in range(0,2*radius):
+        color_scaling=math.sqrt(2*3.1415*_scale)*norm.pdf(i/_scale,scale=_scale)
+        color_circ=f"hsv({max(color_scaling*360,.01)},100%,50%)"
+        draw_circ(p,i,color_circ,draw)
+
+
+
+def plot_hex_dots(h,radius,color,draw,_type):
+    assert _type=="Circle" or _type=="Gaussian"
+    corners=to_tuple(polygon_corners(layout,h))
+    #corners.append(hex_to_pixel(layout,h)) #Drawing center dot as well. Not needed 
+    for p in corners[:4]:
+        if _type == 'Circle':
+            solid_circ(p,radius,color,draw)
+        if _type == "Gaussian":
+            Gauss_circ(p,radius,color,draw)
+        else:
+            print('Invalid type')
+            break
 
 
 
 #%%
 #Drawing Hexogonal grid
+orange=(202,163,24)
 image_size=(4096,4096)
-im=Image.new('RGB',image_size,color=(202,163,24))
+im=Image.new('RGBA',image_size,color='black')
 d=ImageDraw.Draw(im)
 #origin=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
 origin=Point(0,0) #Top left corner
 size=Point(900,900)
-dot_size=0.45*size[0]
+dot_size=math.floor(0.2*size[0])
 line_width=math.floor(.3*size[0])
-structure_color="black"
+structure_color=orange
 layout= Layout(layout_flat,size,origin)
 map=rect_map(4,4)
 
+#Gauss_circ(origin,300,structure_color,d)
 for h in map:
-    #plot_hex_dots(h,dot_size,d)
-    plot_hex_dots(h,dot_size,structure_color,d)
+    plot_hex_dots(h,dot_size,structure_color,d,"Gaussian")
     
 im.show()
-im.save("hex_dots_withcenterdot.png")
+im.save("hex_dots_Gaussian_messyattempt.png")
 
 
 
@@ -183,5 +211,10 @@ def test_all():
 test_all()
 
 
+
+#%%
+x=np.linspace(-2,2)
+plt.plot(x,norm.pdf(x,scale=.5))
+plt.show
 
 #%%
