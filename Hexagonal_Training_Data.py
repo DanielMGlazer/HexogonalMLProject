@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 import numpy as np 
 from scipy.stats import norm
+from scipy import ndimage
 
 #%%
 #Defining functions of hexogonal grid
@@ -153,8 +154,8 @@ def Gauss_circ_pixel(p,radius):
     #radius is a given param that represents the standard deviation of the gaussian
     #plot_rad is some multiple of the radius given, it is the radius of the circle to be plotted
     _scale=radius
-    plot_rad=3*radius
-    color_amp=60
+    plot_rad=4*radius
+    color_amp=100
     color_scaling=lambda x: Gaussian(x,_scale,color_amp)
 
     for x in range(max(p[0]-plot_rad,0),min(p[0]+plot_rad,image_size[0])):
@@ -162,11 +163,18 @@ def Gauss_circ_pixel(p,radius):
         for y in range(max(p[1]-y_max,0),min(p[1]+y_max,image_size[1])):
             dist_vec=np.array((x-p[0],y-p[1]))
             distance=np.linalg.norm(dist_vec)
-            rgbcolor=ImageColor.getrgb(f"hsl({math.floor(color_scaling(distance))},100%,50%)")
-            pixel_array[x][y][0]=rgbcolor[0]
-            pixel_array[x][y][1]=rgbcolor[1]
-            pixel_array[x][y][2]=rgbcolor[2]
-            #pixel_array[x][y][0]=0
+            blob_values_array[x][y]+=color_scaling(distance)
+            
+def gauss_to_color():
+    for i in range(image_size[0]):
+        for j in range(image_size[1]):
+            #rgbcolor=ImageColor.getrgb(f"hsl({math.floor(blob_values_array[i][j])},100%,50%)")
+            rgbcolor=ImageColor.getrgb(f"hsl(46,{min(math.floor(blob_values_array[i][j]),100)}%,50%)")
+            pixel_array[i][j][0]=rgbcolor[0]
+            pixel_array[i][j][1]=rgbcolor[1]
+            pixel_array[i][j][2]=rgbcolor[2]
+
+
 
 def plot_hex_dots(h,radius,color,draw,_type):
     assert _type=="Circle" or _type=="Gaussian" or _type=="Gaussian_pixel"
@@ -180,21 +188,32 @@ def plot_hex_dots(h,radius,color,draw,_type):
         if _type=="Gaussian_pixel":
             Gauss_circ_pixel(p,radius)
 
+#%%
+#Noise creation functions
+def make_blurred_image(image,s):
+    image_n = ndimage.filters.gaussian_filter(image, s/20)
+    return image_n
 
+def make_noisy_image(image,l):
+    vals = len(np.unique(image))
+    vals = (l/75) ** np.ceil(np.log2(vals))
+    image_n_filt = np.random.poisson(image* vals) / float(vals)
+    return image_n_filt
 
 
 #%%
 #Drawing Hexogonal grid
 orange=(202,163,24)
 image_size=(512,512)
-background_color=ImageColor.getrgb("hsl(0,100%,50%)")
+background_color=ImageColor.getrgb("hsl(46,0%,50%)")
 im=Image.new("RGB",image_size,color=background_color)
 pixel_array=np.array(im)
+blob_values_array=np.zeros((image_size[0],image_size[1]))
 d=ImageDraw.Draw(im)
 #origin=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
 origin=Point(0,0) #Top left corner
 size=Point(100,100)
-dot_size=math.floor(0.2*size[0])
+dot_size=math.floor(0.3*size[0])
 line_width=math.floor(.3*size[0])
 structure_color=orange
 layout= Layout(layout_flat,size,origin)
@@ -204,13 +223,22 @@ map=rect_map(4,4)
 #Gauss_circ_pixel((0,0),40)
 for h in map:
     plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
+gauss_to_color()
 im=Image.fromarray(pixel_array)
-im.show()
-#im.save("Hex_lat_Gauss_blobs_hsl.png")
+
+fig = plt.figure(figsize = (10, 10))
+ax = plt.subplot(1,1,1)
+ax.imshow(im)
+ax.axis('off')
+#im.save("Hex_lat_Gauss_blobs_biggeratoms.png")
 
 
-#%%
-pixel_array[256][256]
+#%% 
+im1=make_noisy_image(im,50)
+fig = plt.figure(figsize = (10, 10))
+ax = plt.subplot(1,1,1)
+ax.imshow(im)
+ax.axis('off')
 #%%
 #Test functions
 def complain(name):
