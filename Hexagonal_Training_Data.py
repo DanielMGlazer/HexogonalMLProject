@@ -89,12 +89,17 @@ def polygon_corners(layout, h): #Creates an array of corners by applying the cor
         corners.append(Point(center.x + offset.x, center.y + offset.y))
     return corners
 
-def to_tuple(corners): # 
+def to_tuple(corners): #turns corners into an array of tuples 
     tuple_corners=[]
     for p in corners:
         tuple_corners.append((p.x,p.y))
     return tuple_corners
 
+def to_array(corners): # turns corners into an array of arrays for coordinates
+    array_corners=[]
+    for p in corners:
+        array_corners.append([p.x,p.y])
+    return array_corners
 
 
 # Creates rectangular map of hexagons for flat top, origin is in top left
@@ -143,6 +148,8 @@ def Gauss_circ(p,radius,color,draw):
 #Function for drawing gaussian dots pixel by pixel
 Gaussian= lambda x,scl,amp: amp*math.e**(-0.5*(x/scl)**2)
 def Gauss_circ_pixel(p,radius):
+    p[0]=int(p[0])
+    p[1]=int(p[1])
     #radius is a given param that represents the standard deviation of the gaussian
     #plot_rad is some multiple of the radius given, it is the radius of the circle to be plotted
     _scale=radius
@@ -163,7 +170,7 @@ def Gauss_circ_pixel(p,radius):
 
 def plot_hex_dots(h,radius,color,draw,_type):
     assert _type=="Circle" or _type=="Gaussian" or _type=="Gaussian_pixel"
-    corners=to_tuple(polygon_corners(layout,h))
+    corners=to_array(polygon_corners(layout,h))
     #corners.append(hex_to_pixel(layout,h)) #Drawing center dot as well. Not needed 
     for p in corners[:2]:
         if _type == 'Circle':
@@ -194,12 +201,12 @@ layout= Layout(layout_flat,size,origin)
 map=rect_map(4,4)
 
 #solid_circ(origin,300,"hsv(240,100%,50%)",d)
-Gauss_circ_pixel((0,0),40)
-#for h in map:
-    #plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
+#Gauss_circ_pixel((0,0),40)
+for h in map:
+    plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
 im=Image.fromarray(pixel_array)
 im.show()
-#im.save("Single_Gaussian_dot_fixed.png")
+#im.save("Hex_lat_Gauss_blobs_hsl.png")
 
 
 #%%
