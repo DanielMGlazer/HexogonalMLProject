@@ -3,7 +3,7 @@
 import collections
 import math
 import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageColor
 import numpy as np 
 from scipy.stats import norm
 
@@ -133,53 +133,77 @@ def draw_circ(p,radius,color,draw):
 
 
 def Gauss_circ(p,radius,color,draw):
-    _scale=.05*radius
+    _scale=0.5*radius
     for i in range(0,2*radius):
-        color_scaling=math.sqrt(2*3.1415*_scale)*norm.pdf(i/_scale,scale=_scale)
-        color_circ=f"hsv({max(color_scaling*360,.01)},100%,50%)"
+        color_scaling=math.sqrt(2*3.1415*_scale)*240*norm.pdf(i,scale=_scale)
+        color_circ=f"hsv({max(color_scaling,.01)},100%,50%)"
         draw_circ(p,i,color_circ,draw)
 
 
+#Function for drawing gaussian dots pixel by pixel
+Gaussian= lambda x,scl,amp: amp*math.e**(-0.5*(x/scl)**2)
+def Gauss_circ_pixel(p,radius):
+    #radius is a given param that represents the standard deviation of the gaussian
+    #plot_rad is some multiple of the radius given, it is the radius of the circle to be plotted
+    _scale=radius
+    plot_rad=3*radius
+    color_amp=60
+    color_scaling=lambda x: Gaussian(x,_scale,color_amp)
+
+    for x in range(max(p[0]-plot_rad,0),min(p[0]+plot_rad,image_size[0])):
+        y_max=math.floor(math.sqrt(plot_rad**2-(x-p[0])**2))
+        for y in range(max(p[1]-y_max,0),min(p[1]+y_max,image_size[1])):
+            dist_vec=np.array((x-p[0],y-p[1]))
+            distance=np.linalg.norm(dist_vec)
+            rgbcolor=ImageColor.getrgb(f"hsl({math.floor(color_scaling(distance))},100%,50%)")
+            pixel_array[x][y][0]=rgbcolor[0]
+            pixel_array[x][y][1]=rgbcolor[1]
+            pixel_array[x][y][2]=rgbcolor[2]
+            #pixel_array[x][y][0]=0
 
 def plot_hex_dots(h,radius,color,draw,_type):
-    assert _type=="Circle" or _type=="Gaussian"
+    assert _type=="Circle" or _type=="Gaussian" or _type=="Gaussian_pixel"
     corners=to_tuple(polygon_corners(layout,h))
     #corners.append(hex_to_pixel(layout,h)) #Drawing center dot as well. Not needed 
-    for p in corners[:4]:
+    for p in corners[:2]:
         if _type == 'Circle':
             solid_circ(p,radius,color,draw)
         if _type == "Gaussian":
             Gauss_circ(p,radius,color,draw)
-        else:
-            print('Invalid type')
-            break
+        if _type=="Gaussian_pixel":
+            Gauss_circ_pixel(p,radius)
+
 
 
 
 #%%
 #Drawing Hexogonal grid
 orange=(202,163,24)
-image_size=(4096,4096)
-im=Image.new('RGBA',image_size,color='black')
+image_size=(512,512)
+background_color=ImageColor.getrgb("hsl(0,100%,50%)")
+im=Image.new("RGB",image_size,color=background_color)
+pixel_array=np.array(im)
 d=ImageDraw.Draw(im)
 #origin=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
 origin=Point(0,0) #Top left corner
-size=Point(900,900)
+size=Point(100,100)
 dot_size=math.floor(0.2*size[0])
 line_width=math.floor(.3*size[0])
 structure_color=orange
 layout= Layout(layout_flat,size,origin)
 map=rect_map(4,4)
 
-#Gauss_circ(origin,300,structure_color,d)
-for h in map:
-    plot_hex_dots(h,dot_size,structure_color,d,"Gaussian")
-    
+#solid_circ(origin,300,"hsv(240,100%,50%)",d)
+Gauss_circ_pixel((0,0),40)
+#for h in map:
+    #plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
+im=Image.fromarray(pixel_array)
 im.show()
-im.save("hex_dots_Gaussian_messyattempt.png")
+#im.save("Single_Gaussian_dot_fixed.png")
 
 
-
+#%%
+pixel_array[256][256]
 #%%
 #Test functions
 def complain(name):
