@@ -60,26 +60,26 @@ def hex_neighbor(hex, direction):
 # Datatypes for pointy top or flattop lattices
 Orientation = collections.namedtuple("Orientation", ["f0", "f1", "f2", "f3", "b0", "b1", "b2", "b3", "start_angle"])
 Layout = collections.namedtuple("Layout", ["orientation", "size", "origin"])
-layout_flat = Orientation(math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
-layout_pointy = Orientation(3.0 / 2.0, 0.0, math.sqrt(3.0) / 2.0, math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, math.sqrt(3.0) / 3.0, 0.0)
+layout_pointy = Orientation(math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
+layout_flat = Orientation(3.0 / 2.0, 0.0, math.sqrt(3.0) / 2.0, math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, math.sqrt(3.0) / 3.0, 0.0)
 
 #Functions for locating points in xy coordinates
 def hex_to_pixel(layout, h): #returns the x,y coordinate of the center of the hexagon
     M = layout.orientation
-    x = (M.f0*h.q+M.f1*h.r)*layout.size.x
-    y = (M.f2*h.q+M.f3*h.r)*layout.size.y
+    x = (M.f0*h.q+M.f1*h.r)*layout.size[0]
+    y = (M.f2*h.q+M.f3*h.r)*layout.size[1]
     return Point(x + layout.origin.x , y + layout.origin.y)
 
 def hex_corner_offset(layout, corner): #Returns how far off each corner is from the center point
     M = layout.orientation
     size = layout.size
     angle = 2.0 * math.pi * (M.start_angle - corner) / 6.0
-    return Point(size.x * math.cos(angle), size.y * math.sin(angle))
+    return Point(size[0] * math.cos(angle), size[1] * math.sin(angle))
 
 def polygon_corners(layout, h): #Creates an array of corners by applying the corner offset method to the center six times
     corners = []
     center = hex_to_pixel(layout, h)
-    for i in range(4, 6):
+    for i in range(0, 2):
         offset = hex_corner_offset(layout, i)
         corners.append(Point(center.x + offset.x, center.y + offset.y))
     return corners
@@ -100,9 +100,9 @@ def to_array(corners): # turns corners into an array of arrays for coordinates
 # Creates rectangular map of hexagons for flat top, origin is in top left
 def rect_map(map_height,map_width):
     map=[]
-    for r in range(map_height):
-        r_offset=math.floor(r/2)
-        for q in range(-r_offset,map_width-r_offset):
+    for q in range(map_height):
+        q_offset=math.floor(q/2)
+        for r in range(-q_offset,map_width-q_offset):
             #map.append(Hex(q,r-map_height//2,-(q)-(r-map_height//2)))
             map.append(Hex(q,r,-q-r))
     return map
@@ -155,16 +155,15 @@ def gauss_circ_pixel(p,radius):
         for y in range(max(p[1]-y_max,0),min(p[1]+y_max,image_size[1])):
             dist_vec=np.array((x-p[0],y-p[1]))
             distance=np.linalg.norm(dist_vec)
-            blob_values_array[x][y]+=color_scaling(distance)
+            blob_values_array[y][x]+=color_scaling(distance)
             
 def gauss_to_color():
     for i in range(image_size[0]):
         for j in range(image_size[1]):
-            #rgbcolor=ImageColor.getrgb(f"hsl({math.floor(blob_values_array[i][j])},100%,50%)")
-            rgbcolor=ImageColor.getrgb(f"hsl(46,{min(math.floor(blob_values_array[i][j]),100)}%,50%)")
-            pixel_array[i][j][0]=rgbcolor[0]
-            pixel_array[i][j][1]=rgbcolor[1]
-            pixel_array[i][j][2]=rgbcolor[2]
+            rgbcolor=ImageColor.getrgb(f"hsl(46,{min(math.floor(blob_values_array[j][i]),100)}%,50%)")
+            pixel_array[j][i][0]=rgbcolor[0]
+            pixel_array[j][i][1]=rgbcolor[1]
+            pixel_array[j][i][2]=rgbcolor[2]
 
 def plot_hex_dots(h,radius,color,draw,_type):
     assert _type=="Circle" or _type=="Gaussian" or _type=="Gaussian_pixel"
@@ -217,7 +216,7 @@ def color_central_atom():
     atom_locs=get_atom_locs(map)
     central_atom=get_central_atom(atom_locs)
     for i in range(3):
-        pixel_array[math.floor(central_atom[0])][math.floor(central_atom[1])][i]=255
+        pixel_array[math.floor(central_atom[1])][math.floor(central_atom[0])][i]=255
 
 def color_neighbors():
     assert map != 'NoneType'
@@ -226,9 +225,9 @@ def color_neighbors():
     neighbors=get_nearest_neighbors(atom_locs,central_atom)
     i=0
     for n in neighbors:
-        pixel_array[math.floor(n[0])][math.floor(n[1])][i]=225
-        pixel_array[math.floor(n[0])][math.floor(n[1])][i-1]=0
-        pixel_array[math.floor(n[0])][math.floor(n[1])][i-2]=0
+        pixel_array[math.floor(n[1])][math.floor(n[0])][i]=225
+        pixel_array[math.floor(n[1])][math.floor(n[0])][i-1]=0
+        pixel_array[math.floor(n[1])][math.floor(n[0])][i-2]=0
         i+=1
     
 
@@ -240,9 +239,9 @@ def initialize_neighbor_vec():
     global neighborvec1
     global neighborvec2
     global neighborvec3
-    neighborvec1=np.array([-size.x,0])
-    neighborvec2=np.array([math.sqrt(3)/2*size.x,size.y/2])
-    neighborvec3=np.array([math.sqrt(3)/2*size.x,-size.y/2])
+    neighborvec1=np.array([-size[0],0])
+    neighborvec2=np.array([size[0]/2,math.sqrt(3)*size[1]/2])
+    neighborvec3=np.array([size[0]/2,-math.sqrt(3)*size[1]/2])
 
 def get_nearest_neighbors(atom_locs,central):
     neighbors=[]
@@ -255,11 +254,14 @@ def get_nearest_neighbors(atom_locs,central):
         neighbors.append(np.add(neighborvec1,central))
         neighbors.append(np.add(neighborvec2,central))
         neighbors.append(np.add(neighborvec3,central))
+        print("Right")
     else:
         neighbors.append(np.add(-neighborvec1,central))
         neighbors.append(np.add(-neighborvec2,central))
         neighbors.append(np.add(-neighborvec3,central))
+        print("Left")
     return neighbors
+    
 
 
 
@@ -270,11 +272,11 @@ image_size=[32,32]
 background_color=ImageColor.getrgb("hsl(46,0%,50%)")
 im=Image.new("RGB",image_size,color=background_color)
 pixel_array=np.array(im)
-blob_values_array=np.zeros((image_size[0],image_size[1]))
+blob_values_array=np.zeros((image_size[1],image_size[0]))
 d=ImageDraw.Draw(im)
 midpoint=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
-origin=Point(0,0) #Top left corner
-size=Point(8,8)
+origin=Point(0,-5) #Top left corner
+size=[8,8] 
 dot_size=math.floor(0.3*min(size[0],size[1]))
 #line_width=math.floor(.3*size[0])
 structure_color=orange
@@ -283,7 +285,7 @@ layout= Layout(layout_flat,size,origin)
 initialize_neighbor_vec()
 map=rect_map(3,4)
 
-#gauss_circ_pixel((0,0),40)
+#gauss_circ_pixel([18,20],dot_size)
 #plot_hex_dots(Hex(0,0,0),dot_size,structure_color,d,"Gaussian_pixel")
 for h in map:
     plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
@@ -296,7 +298,7 @@ fig = plt.figure(figsize = (10, 10))
 ax = plt.subplot(1,1,1)
 ax.imshow(im)
 ax.axis('off')
-#im.save("Hex_lat_center_finder_5.png")
+im.save("Hex_lat_neighbors_5.png")
 
 #%% 
 im1=make_noisy_image(im,50)
