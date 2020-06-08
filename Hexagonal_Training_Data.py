@@ -90,6 +90,9 @@ class Training_im:
         self.mid=Point(self.image_size[0]//2,self.image_size[1]//2)
         self.layout=Layout(layout_flat,self.bl,self.o)
         self.make_im()
+        self.neighbor_vects=[]
+        self.central_atom=[]
+        self.label_im()
     #Plotting methods
     def gauss_circ(self,p,radius):
         p[0]=int(p[0])
@@ -192,11 +195,19 @@ class Training_im:
             self.plot_hex_dots(h,self.atmsz)
         self.gauss_to_color()
         self.im_fin=Image.fromarray(self.pixel_array)
+   
     def color_data(self):
         self.color_central_atom()
         self.color_neighbors()
         self.im_fin=Image.fromarray(self.pixel_array)
-
+    
+    def label_im(self):
+        atom_locs=self.get_atom_locs(self.map)
+        central_atom=self.get_central_atom(atom_locs)
+        neighbors=self.get_nearest_neighbors(atom_locs,central_atom)
+        self.central_atom=central_atom
+        for n in neighbors:
+            self.neighbor_vects.append(np.array(np.subtract(self.central_atom,n)))
 #%%
 #Plotting images
 bond_lengths=[8,8]
@@ -204,6 +215,8 @@ origin=[-4,0]
 atom_size=2
 im=Training_im(bond_lengths,origin,atom_size)
 #im.color_data()
+print(im.central_atom)
+print(im.neighbor_vects)
 fig = plt.figure(figsize = (10, 10))
 ax = plt.subplot(1,1,1)
 ax.imshow(im.im_fin)
@@ -213,3 +226,15 @@ ax.axis('off')
 
 
 #%%
+#Creates training set
+train_lab= open("training_labels.txt","w+")
+training_labels={}
+for bl in range(6,9):
+    for offset in range(0,5):
+        im=Training_im([bl,bl],[-offset,0],2)
+        training_labels[f"bl{bl}_offset{offset}"]=[im.central_atom,im.neighbor_vects]
+        im.im_fin.save(f"TrainTest_bl{bl}_offset{offset}.png")
+train_lab.write(f"{training_labels}")
+train_lab.close()
+
+# %%
