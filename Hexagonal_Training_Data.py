@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageColor
 import numpy as np 
 from scipy.stats import norm
 from scipy import ndimage
+import json
 
 #%%
 #Defining functions of hexogonal grid
@@ -207,11 +208,13 @@ class Training_im:
         neighbors=self.get_nearest_neighbors(atom_locs,central_atom)
         self.central_atom=central_atom
         for n in neighbors:
-            self.neighbor_vects.append(np.array(np.subtract(self.central_atom,n)))
+            self.neighbor_vects.append([self.central_atom[0]-n[0],self.central_atom[1]-n[1]])
+
+            
 #%%
 #Plotting images
-bond_lengths=[8,8]
-origin=[-4,0]
+bond_lengths=[8,9]
+origin=[-6,0]
 atom_size=2
 im=Training_im(bond_lengths,origin,atom_size)
 #im.color_data()
@@ -227,14 +230,16 @@ ax.axis('off')
 
 #%%
 #Creates training set
-train_lab= open("training_labels.txt","w+")
+train_lab= open("training_labels.json","w+")
 training_labels={}
-for bl in range(6,9):
-    for offset in range(0,5):
-        im=Training_im([bl,bl],[-offset,0],2)
-        training_labels[f"bl{bl}_offset{offset}"]=[im.central_atom,im.neighbor_vects]
-        im.im_fin.save(f"TrainTest_bl{bl}_offset{offset}.png")
-train_lab.write(f"{training_labels}")
+for bl in range(6,10):
+    for offset in range(0,10):
+        for atom_size in range(1,3):
+            im=Training_im([bl,bl],[-offset,0],atom_size)
+            training_labels[f"bl{bl}_offset{offset}_as{atom_size}"]=[im.central_atom,im.neighbor_vects]
+            #im.im_fin.save(f"TrainTest_bl{bl}_offset{offset}_as{atom_size}.png")
+json=json.dumps(training_labels)
+train_lab.write(json)
 train_lab.close()
 
 # %%
