@@ -214,12 +214,32 @@ class Training_im:
 
             
 #%%
+#Creates training set and DataFrame with labels
+train_dataset_dir ='\\Users\\danie\\Penn_State_REU_Jupyter\\Hexagon ML Project\\Training_set_6_10' 
+
+im_names=[]
+central_atom_x_labels=[]
+central_atom_y_labels=[]
+for bl in range(6,10):
+    for offset in range(0,15):
+        for atom_size in range(1,3):
+            im=Training_im([bl,bl],[-offset,0],atom_size)
+            im_names.append(f"bl{bl}_offset{offset}_as{atom_size}.png")
+            central_atom_x_labels.append(im.central_atom[0])
+            central_atom_y_labels.append(im.central_atom[1])
+            #im.im_fin.save(os.path.join(train_dataset_dir,f"bl{bl}_offset{offset}_as{atom_size}.png"))
+
+data={'filename':im_names,'x_coord':central_atom_x_labels,'y_coord':central_atom_y_labels}
+df=pd.DataFrame(data)
+df.to_csv(os.path.join(train_dataset_dir,"training_database.csv"),index=False)
+
+#%%
 #Plotting images
-bond_lengths=[8,9]
+bond_lengths=[8,12]
 origin=[-6,0]
 atom_size=2
 im=Training_im(bond_lengths,origin,atom_size)
-#im.color_data()
+im.color_data()
 print(im.central_atom)
 print(im.neighbor_vects)
 fig = plt.figure(figsize = (10, 10))
@@ -230,23 +250,8 @@ ax.axis('off')
 
 
 #%%
-#Creates training set and DataFrame with labels
-train_dataset_dir ='\\Users\\danie\\Penn_State_REU_Jupyter\\Hexagon ML Project\\Training_set_6_10' 
-
-im_names=[]
-im_labels=[]
-for bl in range(6,10):
-    for offset in range(0,15):
-        for atom_size in range(1,3):
-            im=Training_im([bl,bl],[-offset,0],atom_size)
-            im_names.append(f"bl{bl}_offset{offset}_as{atom_size}.png")
-            im_labels.append(im.central_atom)
-            im.im_fin.save(os.path.join(train_dataset_dir,f"bl{bl}_offset{offset}_as{atom_size}.png"))
-
-data={'filename':im_names,'labels':im_labels}
-df=pd.DataFrame(data)
-df.to_csv(os.path.join(train_dataset_dir,"training_database.csv",index=false)
-
+#Does nothing
+ 
 #%%
 #Creates training set
 # train_lab= open("\\Users\\danie\\Penn_State_REU_Jupyter\\Hexagon ML Project\\Training_set_6_10\\training_labels.json","w+")
@@ -262,3 +267,4 @@ df.to_csv(os.path.join(train_dataset_dir,"training_database.csv",index=false)
 # train_lab.close()
 
 
+# %%
