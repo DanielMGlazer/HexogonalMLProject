@@ -8,6 +8,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy import ndimage
 import json
+import pandas as pd
 
 #%%
 #Defining functions of hexogonal grid
@@ -202,13 +203,14 @@ class Training_im:
         self.color_neighbors()
         self.im_fin=Image.fromarray(self.pixel_array)
     
+    #Labels images with central atom and neighbor vectors scaled to the size of the image
     def label_im(self):
         atom_locs=self.get_atom_locs(self.map)
         central_atom=self.get_central_atom(atom_locs)
         neighbors=self.get_nearest_neighbors(atom_locs,central_atom)
-        self.central_atom=central_atom
+        self.central_atom=[central_atom[0]/self.image_size[0],central_atom[1]/self.image_size[1]]
         for n in neighbors:
-            self.neighbor_vects.append([self.central_atom[0]-n[0],self.central_atom[1]-n[1]])
+            self.neighbor_vects.append([(central_atom[0]-n[0])/self.image_size[0],(central_atom[1]-n[1])/self.image_size[1]])
 
             
 #%%
@@ -227,19 +229,36 @@ ax.axis('off')
 
 
 
+#%%
+#Creates training set and DataFrame with labels
+train_dataset_dir ='\\Users\\danie\\Penn_State_REU_Jupyter\\Hexagon ML Project\\Training_set_6_10' 
+
+im_names=[]
+im_labels=[]
+for bl in range(6,10):
+    for offset in range(0,15):
+        for atom_size in range(1,3):
+            im=Training_im([bl,bl],[-offset,0],atom_size)
+            im_names.append(f"bl{bl}_offset{offset}_as{atom_size}.png")
+            im_labels.append(im.central_atom)
+            im.im_fin.save(os.path.join(train_dataset_dir,f"bl{bl}_offset{offset}_as{atom_size}.png"))
+
+data={'filename':im_names,'labels':im_labels}
+df=pd.DataFrame(data)
+df.to_csv(os.path.join(train_dataset_dir,"training_database.csv",index=false)
 
 #%%
 #Creates training set
-train_lab= open("training_labels.json","w+")
-training_labels={}
-for bl in range(6,10):
-    for offset in range(0,10):
-        for atom_size in range(1,3):
-            im=Training_im([bl,bl],[-offset,0],atom_size)
-            training_labels[f"bl{bl}_offset{offset}_as{atom_size}"]=[im.central_atom,im.neighbor_vects]
-            #im.im_fin.save(f"TrainTest_bl{bl}_offset{offset}_as{atom_size}.png")
-json=json.dumps(training_labels)
-train_lab.write(json)
-train_lab.close()
+# train_lab= open("\\Users\\danie\\Penn_State_REU_Jupyter\\Hexagon ML Project\\Training_set_6_10\\training_labels.json","w+")
+# training_labels={}
+# for bl in range(6,10):
+#     for offset in range(0,15):
+#         for atom_size in range(1,3):
+#             im=Training_im([bl,bl],[-offset,0],atom_size)
+#             training_labels[f"bl{bl}_offset{offset}_as{atom_size}"]=im.central_atom
+#             im.im_fin.save(f"\\Users\\danie\\Penn_State_REU_Jupyter\\Hexagon ML Project\\Training_set_6_10\\bl{bl}_offset{offset}_as{atom_size}.png")
+# json=json.dumps(training_labels)
+# train_lab.write(json)
+# train_lab.close()
 
-# %%
+
