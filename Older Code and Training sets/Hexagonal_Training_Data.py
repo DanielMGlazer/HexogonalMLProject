@@ -9,6 +9,7 @@ from scipy.stats import norm
 from scipy import ndimage
 import json
 import pandas as pd
+import os
 
 #%%
 #Defining functions of hexogonal grid
@@ -249,8 +250,7 @@ ax.axis('off')
 
 
 
-#%%
-#Does nothing
+
  
 #%%
 #Creates training set
