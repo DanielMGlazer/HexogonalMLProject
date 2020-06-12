@@ -63,12 +63,22 @@ Layout = collections.namedtuple("Layout", ["orientation", "size", "origin"])
 layout_pointy = Orientation(math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
 layout_flat = Orientation(3.0 / 2.0, 0.0, math.sqrt(3.0) / 2.0, math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, math.sqrt(3.0) / 3.0, 0.0)
 
+r_hat=np.array([0,1])
+q_hat=np.array([math.sqrt(3)/2,1/2])
+b_hat=r_hat-q_hat
+b_hat=b_hat/np.linalg.norm(b_hat)
 #Functions for locating points in xy coordinates
-def hex_to_pixel(layout, h): #returns the x,y coordinate of the center of the hexagon
+def hex_to_pixel(layout, h, strain): #returns the x,y coordinate of the center of the hexagon, strain is an array [q,r,s] of percent strain in each direction
     M = layout.orientation
-    x = (M.f0*h.q+M.f1*h.r)*layout.size[0]
-    y = (M.f2*h.q+M.f3*h.r)*layout.size[1]
-    return Point(x + layout.origin.x , y + layout.origin.y)
+    x = ((M.f0*h.q+M.f1*h.r))*layout.size[0]
+    y = ((M.f2*h.q+M.f3*h.r))*layout.size[1]
+    h_b=h.r-h.q
+    strain_vec_q=np.array([strain[0]*layout.size[0]*(h.q+1/2*h.r)*q_hat[0],strain[0]*layout.size[1]*(h.q+1/2*h.r)*q_hat[1]])
+    strain_vec_r=np.array([strain[1]*layout.size[0]*(h.r+1/2*h.q)*r_hat[0],strain[1]*layout.size[1]*(h.r+1/2*h.q)*r_hat[1]])
+    strain_vec_b=np.array([strain[2]*layout.size[0]*(h_b-1/2*h.r+1/2*h.q)*b_hat[0],strain[2]*layout.size[1]*(h_b-1/2*h.r+1/2*h.q)*b_hat[1]])
+    strain_vec=strain_vec_q+strain_vec_r+strain_vec_b
+    return Point(x +strain_vec[0]+ layout.origin[0] , y +strain_vec[1]+ layout.origin[1])
+
 
 def hex_corner_offset(layout, corner): #Returns how far off each corner is from the center point
     M = layout.orientation
@@ -76,12 +86,21 @@ def hex_corner_offset(layout, corner): #Returns how far off each corner is from 
     angle = 2.0 * math.pi * (M.start_angle - corner) / 6.0
     return Point(size[0] * math.cos(angle), size[1] * math.sin(angle))
 
-def polygon_corners(layout, h): #Creates an array of corners by applying the corner offset method to the center six times
+r_strain_order=[0,-1,-1,0,1,1]
+q_strain_order=[1,0,-1,-1,0,1]
+b_strain_order=[-1,-1,0,1,1,0]
+def get_corner_strain_vec(i,strain):
+    strain_order_vec=np.array([q_strain_order[i],r_strain_order[i],s_strain_order[i]])
+    strain_vec=q_hat/2*strain[0]*strain_order_vec[0]+r_hat/2*strain[1]*strain_order_vec[1]+b_hat/2*strain[2]*strain_order_vec[2]
+    return strain_vec
+
+def polygon_corners(layout, h,strain): #Creates an array of corners by applying the corner offset method to the center six times
     corners = []
-    center = hex_to_pixel(layout, h)
-    for i in range(0, 2):
+    center = hex_to_pixel(layout, h,strain)
+    for i in range(0, 6):
         offset = hex_corner_offset(layout, i)
-        corners.append(Point(center.x + offset.x, center.y + offset.y))
+        strain_vec=get_corner_strain_vec(i,strain)
+        corners.append(Point(center.x + offset.x + strain_vec[0]*layout.size[0], center.y + offset.y + strain_vec[1]*layout.size[1]))
     return corners
 
 def to_tuple(corners): #turns corners into an array of tuples 
@@ -107,13 +126,19 @@ def rect_map(map_height,map_width):
             map.append(Hex(q,r,-q-r))
     return map
 
+def romb_map(map_height,map_width):
+    map=[]
+    for q in range(map_height):
+        for r in range(map_width):
+            map.append(Hex(q,r,-q-r))
+    return map
 
 #%%
 #Functions for drawing hexagons
-def plot_hex_grid(h,line_width,color,draw):
-    corners=to_tuple(polygon_corners(layout,h))
-    #corners.append[corners[0]]
-    draw.line(corners[:4],fill=color,width=line_width,joint='curve') #only draws half of each hexagon
+def plot_hex_grid(h,line_width,color,draw,strain):
+    corners=to_tuple(polygon_corners(layout,h,strain))
+    corners.append(corners[0])
+    draw.line(corners,fill=color,width=line_width,joint='curve') #only draws half of each hexagon
 
 def plot_hex_grid_text(h,draw):   #writes the q,r coordinates in the middle of each hexagon
     corners=to_tuple(polygon_corners(layout,h))
@@ -268,37 +293,40 @@ def get_nearest_neighbors(atom_locs,central):
 #%%
 #Drawing Hexogonal grid
 orange=(202,163,24)
-image_size=[32,32]
+image_size=[256,256]
 background_color=ImageColor.getrgb("hsl(46,0%,50%)")
 im=Image.new("RGB",image_size,color=background_color)
 pixel_array=np.array(im)
 blob_values_array=np.zeros((image_size[1],image_size[0]))
 d=ImageDraw.Draw(im)
 midpoint=Point(image_size[0]//2,image_size[1]//2) #middle of the imgage
-origin=Point(0,-5) #Top left corner
-size=[8,8] 
+origin=Point(0,0) #Top left corner
+size=[32,32] 
+strain=[.5,0,.5]
 dot_size=math.floor(0.3*min(size[0],size[1]))
 #line_width=math.floor(.3*size[0])
 structure_color=orange
 layout= Layout(layout_flat,size,origin)
 #layout= Layout(layout_flat,size,midpoint)
 initialize_neighbor_vec()
-map=rect_map(3,4)
+map=rect_map(7,7)
 
 #gauss_circ_pixel([18,20],dot_size)
 #plot_hex_dots(Hex(0,0,0),dot_size,structure_color,d,"Gaussian_pixel")
 for h in map:
-    plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
-
+    #plot_hex_dots(h,dot_size,structure_color,d,"Gaussian_pixel")
+    plot_hex_grid(h,1,structure_color,d,strain)
+    #plot_hex_grid(h,1,(27,115,232),d,[0,0,0])
+#solid_circ(midpoint+10*b_hat,10,structure_color,d)
 gauss_to_color()
-color_central_atom()
-color_neighbors()
-im=Image.fromarray(pixel_array)
+#color_central_atom()
+#color_neighbors()
+#im=Image.fromarray(pixel_array)
 fig = plt.figure(figsize = (10, 10))
 ax = plt.subplot(1,1,1)
 ax.imshow(im)
 ax.axis('off')
-im.save("Hex_lat_neighbors_5.png")
+#im.save("Hex_strain_combo3.png")
 
 #%% 
 im1=make_noisy_image(im,50)
