@@ -5,7 +5,7 @@ from tensorflow.keras.callbacks import TensorBoard as tb
 
 
 def main():
-    tb.configure(bind_all=True, logdir="logs\\fit")
+    tb.configure(bind_all=True, logdir="Training_logs")
     url = tb.launch()
     print("TensorBoard %s started at %s" % (tensorboard.__version__, url))
     pid = os.getpid()
