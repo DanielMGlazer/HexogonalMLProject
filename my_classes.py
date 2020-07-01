@@ -6,6 +6,7 @@ import os
 import collections
 import math
 from PIL import Image, ImageDraw, ImageFont, ImageColor
+from scipy.ndimage.filters import gaussian_filter
 
 class DataGenerator(Sequence):
     'Generates data for Keras'
@@ -61,6 +62,73 @@ class DataGenerator(Sequence):
             # Store sample
             #x=np.load(os.path.join(self.directory,ID))
             X[i,] = np.reshape(np.load(os.path.join(self.directory,ID)),(self.dim[0],self.dim[1],1))
+
+            # Store class
+            y[i] = self.labels[ID]
+
+        return X, y
+    
+    
+    
+class DataGeneratorAug(Sequence):
+    'Generates data for Keras'
+    def __init__(self, list_IDs, labels,directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True):
+        'Initialization'
+        self.dim = dim
+        self.batch_size = batch_size
+        self.labels = labels
+        self.list_IDs = list_IDs
+        self.length=len(list_IDs)
+        self.directory= directory
+        self.shuffle = shuffle
+        self.train = train
+        self.on_epoch_end()
+
+    def __len__(self):
+        'Denotes the number of batches per epoch'
+        return int(np.floor(len(self.list_IDs) / self.batch_size))
+
+    def __getitem__(self, index):
+        'Generate one batch of data'
+        # Generate indexes of the batch
+        if (index+1)*self.batch_size<=self.length:
+            indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        else:
+            indexes=self.indexes[index*self.batch_size:self.length]
+        # Find list of IDs
+        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+        # Generate data
+        X, y = self.__data_generation(list_IDs_temp)
+
+        if self.train==True:
+            return X, y
+        
+        else:
+            return X
+
+    def on_epoch_end(self):
+        'Updates indexes after each epoch'
+        self.indexes = np.arange(len(self.list_IDs))
+        if self.shuffle == True:
+            np.random.shuffle(self.indexes)
+    def data_aug(self, data):
+        sigma=truncnorm.rvs(a=(0-2)/0.5,b=(3-2)/0.5,loc=2,scale=0.5)
+        data=gaussian_filter(data,[0,sigma])
+        return data
+        
+    def __data_generation(self, list_IDs_temp):
+        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        # Initialization
+        X = np.empty((self.batch_size, *self.dim))
+        y = np.empty((self.batch_size,8))
+
+        # Generate data
+        for i, ID in enumerate(list_IDs_temp):
+            # Store sample
+            data=np.load(os.path.join(self.directory,ID))
+            data=self.data_aug(data)
+            X[i,] = np.reshape(data,self.dim)
 
             # Store class
             y[i] = self.labels[ID]
