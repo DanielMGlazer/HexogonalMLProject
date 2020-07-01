@@ -68,7 +68,7 @@ class DataGenerator(Sequence):
         return X, y
     
      
-    
+
 class STMImage:
 
     background_color=ImageColor.getrgb("hsl(46,0%,50%)")
