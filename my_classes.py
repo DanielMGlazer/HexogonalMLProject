@@ -112,9 +112,12 @@ class DataGeneratorAug(Sequence):
         self.indexes = np.arange(len(self.list_IDs))
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
-    def data_aug(self, data):
-        sigma=truncnorm.rvs(a=(0-2)/0.5,b=(3-2)/0.5,loc=2,scale=0.5)
-        data=gaussian_filter(data,[0,sigma])
+            
+    def data_aug(self, data): #Performs data aumentation before being fed into batch
+        #Standardization
+        data -= np.mean(data)
+        data /= np.std(data)
+        data=np.reshape(data,self.dim)
         return data
         
     def __data_generation(self, list_IDs_temp):
@@ -128,7 +131,7 @@ class DataGeneratorAug(Sequence):
             # Store sample
             data=np.load(os.path.join(self.directory,ID))
             data=self.data_aug(data)
-            X[i,] = np.reshape(data,self.dim)
+            X[i,] = data
 
             # Store class
             y[i] = self.labels[ID]
