@@ -72,7 +72,8 @@ class DataGenerator(Sequence):
     
 class DataGeneratorAug(Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels=[0],directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True):
+    def __init__(self, list_IDs, labels=[0],directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,
+                norm='standardize'):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
@@ -114,14 +115,15 @@ class DataGeneratorAug(Sequence):
             np.random.shuffle(self.indexes)
             
     def data_aug(self, data): #Performs data aumentation before being fed into batch
-#         #Standardization
-#         data -= np.mean(data)
-#         data /= np.std(data)
+        #Standardization
+        if self.norm == 'standardize':
+            data -= np.mean(data)
+            data /= np.std(data)
 
         #Divide out the max
-        data_max=np.max(data)
-        data /= data_max
-        
+        if self.norm == 'divmax':
+            data_max=np.max(data)
+            data /= data_max
         
         data=np.reshape(data,self.dim)
         return data
@@ -145,6 +147,86 @@ class DataGeneratorAug(Sequence):
         return X, y
     
      
+class DataGeneratorMultiInputAug(Sequence):
+    'Generates data for Keras'
+    def __init__(self, list_IDs, labels, extra_inputs, directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,
+                 norm='standardize'):
+        'Initialization'
+        self.dim = dim
+        self.batch_size = batch_size
+        self.labels = labels
+        self.extra_inputs = extra_inputs
+        self.list_IDs = list_IDs
+        self.length = len(list_IDs)
+        self.directory = directory
+        self.shuffle = shuffle
+        self.train = train
+        self.norm = norm
+        self.on_epoch_end()
+
+    def __len__(self):
+        'Denotes the number of batches per epoch'
+        return int(np.floor(len(self.list_IDs) / self.batch_size))
+
+    def __getitem__(self, index):
+        'Generate one batch of data'
+        # Generate indexes of the batch
+        if (index+1)*self.batch_size<=self.length:
+            indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        else:
+            indexes=self.indexes[index*self.batch_size:self.length]
+        # Find list of IDs
+        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+        # Generate data
+        [X,X1], y = self.__data_generation(list_IDs_temp)
+
+        if self.train==True:
+            return [X,X1], y
+        
+        else:
+            return [X,X1]
+
+    def on_epoch_end(self):
+        'Updates indexes after each epoch'
+        self.indexes = np.arange(len(self.list_IDs))
+        if self.shuffle == True:
+            np.random.shuffle(self.indexes)
+            
+    def data_aug(self, data): #Performs data aumentation before being fed into batch
+        #Standardization
+        if self.norm == 'standardize':
+            data -= np.mean(data)
+            data /= np.std(data)
+
+        #Divide out the max
+        if self.norm == 'divmax':
+            data_max=np.max(data)
+            data /= data_max
+        
+        data=np.reshape(data,self.dim)
+        return data
+        
+    def __data_generation(self, list_IDs_temp):
+        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        # Initialization
+        X = np.empty((self.batch_size, *self.dim))
+        X1= np.empty((self.batch_size,1))
+        y = np.empty((self.batch_size,8))
+
+        # Generate data
+        for i, ID in enumerate(list_IDs_temp):
+            # Store sample
+            data=np.load(os.path.join(self.directory,ID))
+            data=self.data_aug(data)
+            X[i,] = data
+            X1[i] = self.extra_inputs[ID]
+
+            # Store class
+            if self.train==True:
+                y[i] = self.labels[ID]
+
+        return [X,X1], y
 
 class STMImage:
 
