@@ -72,7 +72,7 @@ class DataGenerator(Sequence):
     
 class DataGeneratorAug(Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels,directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True):
+    def __init__(self, list_IDs, labels=[0],directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
@@ -114,9 +114,15 @@ class DataGeneratorAug(Sequence):
             np.random.shuffle(self.indexes)
             
     def data_aug(self, data): #Performs data aumentation before being fed into batch
-        #Standardization
-        data -= np.mean(data)
-        data /= np.std(data)
+#         #Standardization
+#         data -= np.mean(data)
+#         data /= np.std(data)
+
+        #Divide out the max
+        data_max=np.max(data)
+        data /= data_max
+        
+        
         data=np.reshape(data,self.dim)
         return data
         
