@@ -68,7 +68,21 @@ class DataGenerator(Sequence):
 
         return X, y
     
-    
+def data_aug(data, norm,dim):#Performs data aumentation before being fed into batch
+    assert norm == 'standardize' or norm == 'divmax'
+    #Standardization
+    if norm == 'standardize':
+        data -= np.mean(data)
+        data /= np.std(data)
+
+    #Divide out the max
+    if norm == 'divmax':
+        data -= np.mean(data)
+        data_max=np.max(data)
+        data /= data_max
+        
+    data=np.reshape(data,dim)
+    return data   
     
 class DataGeneratorAug(Sequence):
     'Generates data for Keras'
@@ -83,6 +97,7 @@ class DataGeneratorAug(Sequence):
         self.directory= directory
         self.shuffle = shuffle
         self.train = train
+        self.norm=norm
         self.on_epoch_end()
 
     def __len__(self):
@@ -114,19 +129,20 @@ class DataGeneratorAug(Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
             
-    def data_aug(self, data): #Performs data aumentation before being fed into batch
-        #Standardization
-        if self.norm == 'standardize':
-            data -= np.mean(data)
-            data /= np.std(data)
+#     def data_aug(self, data): #Performs data aumentation before being fed into batch
+#         #Standardization
+#         if self.norm == 'standardize':
+#             data -= np.mean(data)
+#             data /= np.std(data)
 
-        #Divide out the max
-        if self.norm == 'divmax':
-            data_max=np.max(data)
-            data /= data_max
+#         #Divide out the max
+#         if self.norm == 'divmax':
+#             data -= np.mean(data)
+#             data_max=np.max(data)
+#             data /= data_max
         
-        data=np.reshape(data,self.dim)
-        return data
+#         data=np.reshape(data,self.dim)
+#         return data
         
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -138,7 +154,7 @@ class DataGeneratorAug(Sequence):
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
             data=np.load(os.path.join(self.directory,ID))
-            data=self.data_aug(data)
+            data=data_aug(data,self.norm,self.dim)
             X[i,] = data
 
             # Store class
@@ -193,19 +209,20 @@ class DataGeneratorMultiInputAug(Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
             
-    def data_aug(self, data): #Performs data aumentation before being fed into batch
-        #Standardization
-        if self.norm == 'standardize':
-            data -= np.mean(data)
-            data /= np.std(data)
+#     def data_aug(self, data): #Performs data aumentation before being fed into batch
+#         #Standardization
+#         if self.norm == 'standardize':
+#             data -= np.mean(data)
+#             data /= np.std(data)
 
-        #Divide out the max
-        if self.norm == 'divmax':
-            data_max=np.max(data)
-            data /= data_max
+#         #Divide out the max
+#         if self.norm == 'divmax':
+#             data -= np.mean(data)
+#             data_max=np.max(data)
+#             data /= data_max
         
-        data=np.reshape(data,self.dim)
-        return data
+#         data=np.reshape(data,self.dim)
+#         return data
         
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -218,7 +235,7 @@ class DataGeneratorMultiInputAug(Sequence):
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
             data=np.load(os.path.join(self.directory,ID))
-            data=self.data_aug(data)
+            data=data_aug(data,self.norm,self.dim)
             X[i,] = data
             X1[i] = self.extra_inputs[ID]
 
