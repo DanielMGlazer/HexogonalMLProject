@@ -84,6 +84,20 @@ def data_aug(data, norm,dim):#Performs data aumentation before being fed into ba
     data=np.reshape(data,dim)
     return data   
     
+
+def label_aug(label):
+    new_label=np.empty((8))
+    new_label[0]=label[0]
+    new_label[1]=label[1]
+    new_label[2]=label[0]+label[2]
+    new_label[3]=label[1]+label[3]
+    new_label[4]=label[0]+label[4]
+    new_label[5]=label[1]+label[5]
+    new_label[6]=label[0]+label[6]
+    new_label[7]=label[1]+label[7]
+    return new_label
+    
+    
 class DataGeneratorAug(Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs, labels=[0],directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,
@@ -129,20 +143,6 @@ class DataGeneratorAug(Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
             
-#     def data_aug(self, data): #Performs data aumentation before being fed into batch
-#         #Standardization
-#         if self.norm == 'standardize':
-#             data -= np.mean(data)
-#             data /= np.std(data)
-
-#         #Divide out the max
-#         if self.norm == 'divmax':
-#             data -= np.mean(data)
-#             data_max=np.max(data)
-#             data /= data_max
-        
-#         data=np.reshape(data,self.dim)
-#         return data
         
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -209,20 +209,6 @@ class DataGeneratorMultiInputAug(Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
             
-#     def data_aug(self, data): #Performs data aumentation before being fed into batch
-#         #Standardization
-#         if self.norm == 'standardize':
-#             data -= np.mean(data)
-#             data /= np.std(data)
-
-#         #Divide out the max
-#         if self.norm == 'divmax':
-#             data -= np.mean(data)
-#             data_max=np.max(data)
-#             data /= data_max
-        
-#         data=np.reshape(data,self.dim)
-#         return data
         
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -241,6 +227,8 @@ class DataGeneratorMultiInputAug(Sequence):
 
             # Store class
             if self.train==True:
+#                 label=self.labels[ID]
+#                 label=label_aug(label)
                 y[i] = self.labels[ID]
 
         return [X,X1], y
