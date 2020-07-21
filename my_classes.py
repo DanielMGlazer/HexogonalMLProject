@@ -80,7 +80,8 @@ def data_aug(data, norm,dim):#Performs data aumentation before being fed into ba
         data -= np.mean(data)
         data_max=np.max(data)
         data /= data_max
-        
+       
+    #data=data[0:32,0:32]
     data=np.reshape(data,dim)
     return data   
     
