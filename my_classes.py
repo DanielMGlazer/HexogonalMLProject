@@ -7,6 +7,76 @@ import collections
 import math
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 from scipy.ndimage.filters import gaussian_filter
+import scipy.ndimage.filters as filters
+import scipy.ndimage.morphology as morphology
+
+def detect_local_minima(arr):
+    # https://stackoverflow.com/questions/3684484/peak-detection-in-a-2d-array/3689710#3689710
+    """
+    Takes an array and detects the troughs using the local maximum filter.
+    Returns a boolean mask of the troughs (i.e. 1 when
+    the pixel's value is the neighborhood maximum, 0 otherwise)
+    """
+    # define an connected neighborhood
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.morphology.html#generate_binary_structure
+    neighborhood = morphology.generate_binary_structure(len(arr.shape),2)
+    # apply the local minimum filter; all locations of minimum value 
+    # in their neighborhood are set to 1
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.filters.html#minimum_filter
+    local_min = (filters.minimum_filter(arr, footprint=neighborhood)==arr)
+    # local_min is a mask that contains the peaks we are 
+    # looking for, but also the background.
+    # In order to isolate the peaks we must remove the background from the mask.
+    # 
+    # we create the mask of the background
+    background = (arr==0)
+    # 
+    # a little technicality: we must erode the background in order to 
+    # successfully subtract it from local_min, otherwise a line will 
+    # appear along the background border (artifact of the local minimum filter)
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.morphology.html#binary_erosion
+    eroded_background = morphology.binary_erosion(
+        background, structure=neighborhood, border_value=1)
+    # 
+    # we obtain the final mask, containing only peaks, 
+    # by removing the background from the local_min mask
+    detected_minima = local_min ^ eroded_background
+    #return np.where(detected_minima)  
+    return detected_minima
+
+
+def detect_local_maxima(arr):
+    # https://stackoverflow.com/questions/3684484/peak-detection-in-a-2d-array/3689710#3689710
+    """
+    Takes an array and detects the troughs using the local maximum filter.
+    Returns a boolean mask of the troughs (i.e. 1 when
+    the pixel's value is the neighborhood maximum, 0 otherwise)
+    """
+    # define an connected neighborhood
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.morphology.html#generate_binary_structure
+    neighborhood = morphology.generate_binary_structure(len(arr.shape),2)
+    # apply the local minimum filter; all locations of minimum value 
+    # in their neighborhood are set to 1
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.filters.html#minimum_filter
+    local_max = (filters.maximum_filter(arr, footprint=neighborhood)==arr)
+    # local_min is a mask that contains the peaks we are 
+    # looking for, but also the background.
+    # In order to isolate the peaks we must remove the background from the mask.
+    # 
+    # we create the mask of the background
+    background = (arr==0)
+    # 
+    # a little technicality: we must erode the background in order to 
+    # successfully subtract it from local_min, otherwise a line will 
+    # appear along the background border (artifact of the local minimum filter)
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.morphology.html#binary_erosion
+    eroded_background = morphology.binary_erosion(
+        background, structure=neighborhood, border_value=1)
+    # 
+    # we obtain the final mask, containing only peaks, 
+    # by removing the background from the local_min mask
+    detected_maxima = local_max ^ eroded_background
+    return detected_maxima
 
 class DataGenerator(Sequence):
     'Generates data for Keras'
@@ -81,7 +151,6 @@ def data_aug(data, norm,dim):#Performs data aumentation before being fed into ba
         data_max=np.max(data)
         data /= data_max
        
-    #data=data[0:32,0:32]
     data=np.reshape(data,dim)
     return data   
     
@@ -233,6 +302,78 @@ class DataGeneratorMultiInputAug(Sequence):
                 y[i] = self.labels[ID]
 
         return [X,X1], y
+
+    
+class DataGeneratorPeakMask(Sequence):
+    'Generates data for Keras'
+    def __init__(self, list_IDs, labels, directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,
+                 norm='divmax'):
+        'Initialization'
+        self.dim = dim
+        self.batch_size = batch_size
+        self.labels = labels
+        self.list_IDs = list_IDs
+        self.length = len(list_IDs)
+        self.directory = directory
+        self.shuffle = shuffle
+        self.train = train
+        self.norm = norm
+        self.on_epoch_end()
+
+    def __len__(self):
+        'Denotes the number of batches per epoch'
+        return int(np.floor(len(self.list_IDs) / self.batch_size))
+
+    def __getitem__(self, index):
+        'Generate one batch of data'
+        # Generate indexes of the batch
+        if (index+1)*self.batch_size<=self.length:
+            indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        else:
+            indexes=self.indexes[index*self.batch_size:self.length]
+        # Find list of IDs
+        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+        # Generate data
+        X, y = self.__data_generation(list_IDs_temp)
+
+        if self.train==True:
+            return X, y
+        
+        else:
+            return X
+
+    def on_epoch_end(self):
+        'Updates indexes after each epoch'
+        self.indexes = np.arange(len(self.list_IDs))
+        if self.shuffle == True:
+            np.random.shuffle(self.indexes)
+            
+        
+    def __data_generation(self, list_IDs_temp):
+        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        # Initialization
+        X = np.empty((self.batch_size, *(self.dim[0],self.dim[1],2)))
+        y = np.empty((self.batch_size,8))
+
+        # Generate data
+        for i, ID in enumerate(list_IDs_temp):
+            # Store sample
+            data=np.load(os.path.join(self.directory,ID))
+            data=data[0:32,0:32]
+            mask=detect_local_maxima(data)
+            mask=np.reshape(mask,self.dim)
+            data=data_aug(data,self.norm,self.dim)
+            entry=np.concatenate((data,mask),axis=2)
+            X[i,] = entry
+
+            # Store class
+            if self.train==True:
+                y[i] = self.labels[ID]
+
+        return X, y
+    
+    
 
 class STMImage:
 
