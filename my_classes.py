@@ -218,7 +218,7 @@ class DataGeneratorAug(Sequence):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
         X = np.empty((self.batch_size, *self.dim))
-        y = np.empty((self.batch_size,8))
+        y = np.empty((self.batch_size,2)) #Empty array to fill with labels. Second value must be the number of labels for this model
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
