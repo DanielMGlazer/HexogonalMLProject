@@ -306,7 +306,7 @@ class DataGeneratorMultiInputAug(Sequence):
     
 class DataGeneratorPeakMask(Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels, directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,
+    def __init__(self, list_IDs, labels, directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,peak='minima',
                  norm='divmax'):
         'Initialization'
         self.dim = dim
@@ -317,6 +317,7 @@ class DataGeneratorPeakMask(Sequence):
         self.directory = directory
         self.shuffle = shuffle
         self.train = train
+        self.peak=peak
         self.norm = norm
         self.on_epoch_end()
 
@@ -360,8 +361,10 @@ class DataGeneratorPeakMask(Sequence):
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
             data=np.load(os.path.join(self.directory,ID))
-            data=data[0:32,0:32]
-            mask=detect_local_maxima(data)
+            if self.peak=='minima':
+                mask=detect_local_minima(data)
+            elif self.peak=='maxima':
+                mask=detect_local_maxima(data)
             mask=np.reshape(mask,self.dim)
             data=data_aug(data,self.norm,self.dim)
             entry=np.concatenate((data,mask),axis=2)
