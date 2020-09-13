@@ -232,7 +232,49 @@ class DataGeneratorAug(Sequence):
 
         return X, y
     
-     
+class RealDataGenerator(Sequence):
+    'Generates data for Keras'
+    def __init__(self, slice_arr, y_value, batch_size=32, dim=(32,32,1), norm='divmax'):
+        'Initialization'
+        self.dim = dim
+        self.batch_size = batch_size
+        self.slice_arr=slice_arr
+        self.y_value=y_value
+        self.norm=norm
+        self.on_epoch_end()
+
+    def __len__(self):
+        'Denotes the number of batches per epoch'
+        return 1
+
+    def __getitem__(self, index):
+        'Generate one batch of data'
+        X, = self.__data_generation()
+
+        return X
+
+    def on_epoch_end(self):
+        'Updates indexes after each epoch'
+        self.indexes = np.arange(batch_size)
+            
+        
+    def __data_generation(self):
+        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        # Initialization
+        X = np.empty((self.batch_size, *self.dim))
+        
+        # Generate data
+        for i in range(self.indexes):
+            # Store sample
+            data=self.slice_arr[self.y_value][i]
+            data=data_aug(data,self.norm,self.dim)
+            X[i,] = data
+
+        return X
+    
+
+    
+    
 class DataGeneratorMultiInputAug(Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs, labels, extra_inputs, directory=None, batch_size=32, dim=(32,32,1), shuffle=True, train=True,
